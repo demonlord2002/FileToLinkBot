@@ -1,4 +1,6 @@
-import os, uuid, asyncio
+import os
+import uuid
+import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from fastapi import FastAPI
@@ -12,9 +14,9 @@ import uvicorn
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-BIN_CHANNEL = os.getenv("BIN_CHANNEL", "@Dupolobn")  # can be @username or -100XXXX
+BIN_CHANNEL = os.getenv("BIN_CHANNEL", "@Dupolobn")  # Public channel username
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-FQDN = os.getenv("FQDN", "").rstrip("/")
+FQDN = os.getenv("FQDN", "").rstrip("/")  # Your Heroku app URL
 PORT = int(os.getenv("PORT", 8080))
 
 # --------------------------
@@ -83,16 +85,21 @@ async def handle_file(client, message):
         if message.document and message.document.file_size > 2_000_000_000:
             return await message.reply_text("⚠️ Sorry! Telegram bots can only handle files up to 2 GB.")
 
-        file = await message.copy(chat_id=BIN_CHANNEL)
-        file_id = str(uuid.uuid4())
-        file_url = f"https://t.me/{file.chat.username}/{file.id}" if file.chat.username else file.link
+        # Copy file to BIN_CHANNEL
+        copied = await message.copy(chat_id=BIN_CHANNEL)
 
+        # Generate file URL using public channel username
+        file_url = f"https://t.me/{copied.chat.username}/{copied.id}"
+
+        # Insert into MongoDB
+        file_id = str(uuid.uuid4())
         collection.insert_one({
             "_id": file_id,
             "file_name": message.document.file_name if message.document else "Media",
             "file_url": file_url
         })
 
+        # Links
         dl_link = f"{FQDN}/dl/{file_id}"
         watch_link = f"{FQDN}/watch/{file_id}"
         share_link = f"https://t.me/{client.me.username}?start=file_{file_id}"
@@ -119,6 +126,7 @@ async def main():
     await bot.start()
     await resolve_bin_channel()
     print("✅ Bot started successfully!")
+
     config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()

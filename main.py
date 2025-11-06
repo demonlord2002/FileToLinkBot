@@ -1,6 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from fastapi import FastAPI
+import threading
+import uvicorn
 from fastapi.responses import RedirectResponse
 from pymongo import MongoClient
 from config import *
@@ -92,7 +94,6 @@ async def handle_file(client, message):
 # --------------------------
 #  Start Bot and Web Server (Heroku Fix)
 # --------------------------
-import threading
 
 def run_web():
     uvicorn.run(app, host="0.0.0.0", port=PORT)

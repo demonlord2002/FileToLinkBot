@@ -4,8 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from pymongo import MongoClient
 from config import *
-
-import os, uuid
+import os, uuid, asyncio, uvicorn
 
 # --------------------------
 #  FastAPI Web Server Setup
@@ -56,6 +55,10 @@ bot = Client("FileToLinkBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TO
 @bot.on_message(filters.private & filters.media)
 async def handle_file(client, message):
     try:
+        # Check 2 GB limit
+        if message.document and message.document.file_size > 2_000_000_000:
+            return await message.reply_text("⚠️ Sorry! Telegram bots can only handle files up to 2 GB.")
+
         file = await message.copy(chat_id=BIN_CHANNEL)
         file_id = str(uuid.uuid4())
         file_url = f"https://t.me/{file.chat.username}/{file.id}" if file.chat.username else file.link
@@ -87,9 +90,22 @@ async def handle_file(client, message):
         await message.reply_text(f"⚠️ Oops! Error: {e}")
 
 # --------------------------
-#  Start Bot and Web Server
+#  Start Bot and Web Server (Asyncio Safe)
 # --------------------------
+async def start_bot():
+    await bot.start()
+    print("✅ Bot started successfully!")
+
+async def start_web():
+    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+async def main():
+    await asyncio.gather(
+        start_bot(),
+        start_web()
+    )
+
 if __name__ == "__main__":
-    import threading, uvicorn
-    threading.Thread(target=lambda: bot.run()).start()
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    asyncio.run(main())

@@ -1,4 +1,6 @@
-pyrogram==2.3.68
+pyrogram==2.0.106
+tgcrypto
 fastapi
 uvicorn
 pymongo
+dnspython

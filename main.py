@@ -90,22 +90,16 @@ async def handle_file(client, message):
         await message.reply_text(f"⚠️ Oops! Error: {e}")
 
 # --------------------------
-#  Start Bot and Web Server (Asyncio Safe)
+#  Start Bot and Web Server (Heroku Fix)
 # --------------------------
-async def start_bot():
-    await bot.start()
-    print("✅ Bot started successfully!")
+import threading
 
-async def start_web():
-    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
+def run_web():
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
 
-async def main():
-    await asyncio.gather(
-        start_bot(),
-        start_web()
-    )
+def run_bot():
+    bot.run()  # handles long polling internally
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    threading.Thread(target=run_web).start()
+    run_bot()
